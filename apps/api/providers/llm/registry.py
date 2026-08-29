@@ -1,10 +1,12 @@
 # apps/api/providers/llm/registry.py
 
-from apps.api.providers.llm.ollama import OllamaLLM
 from apps.api.providers.llm.fireworks import FireworksLLM
-
+from apps.api.providers.llm.mock import MockLLM
+from apps.api.providers.llm.ollama import OllamaLLM
 
 llm_provider_classes = {
+
+    "mock": MockLLM,
 
     "ollama": OllamaLLM,
 

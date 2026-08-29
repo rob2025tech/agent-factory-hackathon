@@ -67,4 +67,5 @@ async def execute(request: ExecuteRequest):
             "memory_count",
             0,
         ),
+        trace=result.get("trace"),
     )
