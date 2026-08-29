@@ -19,3 +19,4 @@ class ExecuteResponse(BaseModel):
     backend: str
     prompt: str
     output: str
+    memory_count: int
