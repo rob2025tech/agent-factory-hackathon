@@ -25,6 +25,10 @@ def offline_providers():
     with (
         patch.object(agent_service, "memory", mock_memory),
         patch.object(agent_service, "llm", mock_llm),
+        patch(
+            "apps.api.services.agent_service.get_llm_provider",
+            return_value=mock_llm,
+        ),
     ):
         yield
 
