@@ -20,4 +20,5 @@ class MockAdapter(BaseAdapter):
             backend="mock",
             prompt=request.prompt,
             output="hello from mock backend",
+            memory_count=0,
         )
