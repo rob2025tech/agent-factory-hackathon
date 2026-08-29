@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agent Factory — Execution Slice</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --card: #141b31;
+    --border: #2a3558;
+    --text: #e8ecf8;
+    --muted: #8b94b8;
+    --accent: #5b8cff;
+    --green: #38d39f;
+    --red: #ff5d73;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+
+  .app { width: 100%; max-width: 560px; }
+
+  h1 { font-size: 20px; margin: 0 0 4px; }
+
+  .subtitle { color: var(--muted); font-size: 13px; margin: 0 0 24px; }
+
+  .input-row { display: flex; gap: 8px; margin-bottom: 24px; }
+
+  #prompt {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font: inherit;
+    padding: 10px 12px;
+    outline: none;
+  }
+
+  #prompt:focus { border-color: var(--accent); }
+
+  #run {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font: inherit;
+    font-weight: bold;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+
+  #run:disabled { opacity: 0.5; cursor: wait; }
+
+  .pipeline { display: flex; flex-direction: column; align-items: stretch; }
+
+  .stage {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    opacity: 0.35;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+
+  .stage.filled { opacity: 1; border-color: var(--accent); }
+
+  .stage-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .stage-body { font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+
+  .kv { color: var(--muted); }
+  .kv b { color: var(--text); font-weight: normal; }
+
+  .arrow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1.6;
+  }
+
+  .arrow.active { color: var(--accent); }
+
+  #status-line { min-height: 20px; margin-top: 20px; font-size: 13px; }
+
+  .hint { color: var(--muted); }
+
+  .error-banner {
+    background: rgba(255, 93, 115, 0.12);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    color: var(--red);
+    margin-top: 12px;
+    padding: 10px 12px;
+    font-size: 13px;
+    display: none;
+  }
+
+  .error-banner.visible { display: block; }
+
+  .ok { color: var(--green); }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Agent Factory</h1>
+  <p class="subtitle">Context &rarr; Skill &rarr; Tool &rarr; LLM &rarr; Output &middot; powered by POST /execute</p>
+
+  <div class="input-row">
+    <input id="prompt" type="text" placeholder='Enter a prompt, e.g. "Hello"' value="Hello" />
+    <button id="run">Run</button>
+  </div>
+
+  <div class="pipeline">
+    <div class="stage" id="stage-context">
+      <div class="stage-title">Context</div>
+      <div class="stage-body hint">waiting for execution&hellip;</div>
+    </div>
+    <div class="arrow" id="arrow-1">&darr;</div>
+    <div class="stage" id="stage-skill">
+      <div class="stage-title">Skill</div>
+      <div class="stage-body hint">waiting for execution&hellip;</div>
+    </div>
+    <div class="arrow" id="arrow-2">&darr;</div>
+    <div class="stage" id="stage-tool">
+      <div class="stage-title">Tool</div>
+      <div class="stage-body hint">waiting for execution&hellip;</div>
+    </div>
+    <div class="arrow" id="arrow-3">&darr;</div>
+    <div class="stage" id="stage-llm">
+      <div class="stage-title">LLM</div>
+      <div class="stage-body hint">waiting for execution&hellip;</div>
+    </div>
+    <div class="arrow" id="arrow-4">&darr;</div>
+    <div class="stage" id="stage-output">
+      <div class="stage-title">Output</div>
+      <div class="stage-body hint">waiting for execution&hellip;</div>
+    </div>
+  </div>
+
+  <div id="status-line" class="hint">Initial state: enter a prompt and click Run.</div>
+  <div id="error-banner" class="error-banner"></div>
+</div>
+
+<script>
+  const promptInput = document.getElementById("prompt");
+  const runBtn = document.getElementById("run");
+  const statusLine = document.getElementById("status-line");
+  const errorBanner = document.getElementById("error-banner");
+
+  const stages = ["context", "skill", "tool", "llm", "output"];
+  const arrows = [1, 2, 3, 4].map((i) => document.getElementById("arrow-" + i));
+
+  function stageEl(name) {
+    return document.getElementById("stage-" + name);
+  }
+
+  function setStage(name, html) {
+    const body = stageEl(name).querySelector(".stage-body");
+    body.classList.remove("hint");
+    body.innerHTML = html;
+    stageEl(name).classList.add("filled");
+  }
+
+  function resetPipeline() {
+    stages.forEach((name) => {
+      const el = stageEl(name);
+      el.classList.remove("filled");
+      const body = el.querySelector(".stage-body");
+      body.classList.add("hint");
+      body.textContent = "waiting for execution\u2026";
+    });
+    arrows.forEach((a) => a.classList.remove("active"));
+  }
+
+  function fillPipeline(data) {
+    const trace = data.trace || {};
+    const ctx = trace.context || {};
+
+    setStage(
+      "context",
+      '<span class="kv">user_id: <b>' + escapeHtml(ctx.user_id ?? "-") + "</b></span><br>" +
+      '<span class="kv">task: <b>' + escapeHtml(ctx.task ?? "-") + "</b></span>"
+    );
+
+    setStage("skill", escapeHtml(trace.skill ?? "-"));
+
+    if (trace.tool) {
+      setStage(
+        "tool",
+        '<span class="kv">name: <b>' + escapeHtml(trace.tool.name) + "</b></span><br>" +
+        '<span class="kv">output: <b>' + escapeHtml(trace.tool.output) + "</b></span>"
+      );
+    } else {
+      setStage("tool", '<span class="kv">no tool executed</span>');
+    }
+
+    const llm = trace.llm || {};
+    setStage(
+      "llm",
+      '<span class="kv">provider: <b>' + escapeHtml(llm.provider ?? "-") + "</b></span><br>" +
+      '<span class="kv">output: <b>' + escapeHtml(llm.output ?? "-") + "</b></span>"
+    );
+
+    setStage("output", escapeHtml(data.output ?? "-"));
+
+    arrows.forEach((a) => a.classList.add("active"));
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+  }
+
+  function setLoading(loading) {
+    runBtn.disabled = loading;
+    runBtn.textContent = loading ? "Running\u2026" : "Run";
+  }
+
+  function showError(message) {
+    errorBanner.textContent = message;
+    errorBanner.classList.add("visible");
+  }
+
+  function hideError() {
+    errorBanner.classList.remove("visible");
+  }
+
+  async function run() {
+    const prompt = promptInput.value.trim();
+    if (!prompt || runBtn.disabled) return;
+
+    hideError();
+    resetPipeline();
+    setLoading(true);
+    statusLine.textContent = "Executing\u2026";
+    statusLine.className = "hint";
+
+    try {
+      const res = await fetch("/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt }),
+      });
+
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (_) {
+        /* non-JSON body */
+      }
+
+      if (!res.ok) {
+        const detail =
+          data && typeof data.detail === "string"
+            ? data.detail
+            : data && data.detail
+              ? JSON.stringify(data.detail)
+              : "HTTP " + res.status;
+        throw new Error(detail);
+      }
+
+      fillPipeline(data);
+      statusLine.textContent = "Success \u2014 trace rendered from the /execute response.";
+      statusLine.className = "ok";
+    } catch (err) {
+      statusLine.textContent = "Error state: execution failed.";
+      statusLine.className = "hint";
+      showError(err && err.message ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  runBtn.addEventListener("click", run);
+  promptInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") run();
+  });
+</script>
+</body>
+</html>

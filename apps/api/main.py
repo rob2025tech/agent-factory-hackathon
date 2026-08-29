@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from .routers import butterbase
 
@@ -21,6 +24,10 @@ from .routers.health import router as health_router
 
 app = FastAPI()
 
+# Static demo UI served same-origin (no CORS needed).
+# CWD-independent path: apps/api/main.py -> apps/web
+WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
 
 @app.get("/")
 def root():
@@ -30,3 +37,5 @@ def root():
 app.include_router(health_router)
 app.include_router(execute_router)
 app.include_router(butterbase.router)
+
+app.mount("/ui", StaticFiles(directory=WEB_DIR, html=True), name="web")
