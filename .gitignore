@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.pytest_cache/
+.coverage
+.DS_Store
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Tests
+.pytest_cache/
+
+# Tools
+.ruff_cache/
+.rocketride/

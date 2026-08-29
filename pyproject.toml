@@ -1,0 +1,43 @@
+[project]
+name = "ai-agent-platform-starter"
+version = "0.1.0"
+description = "FastAPI starter for building AI agent platforms"
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pydantic",
+    "pydantic-settings",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-anyio",
+    "ruff",
+    "black",
+    "mypy",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests"]
+pythonpath = ["."]
+addopts = "-m 'not integration'"
+markers = [
+    "integration: tests requiring external services or API keys"
+]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
