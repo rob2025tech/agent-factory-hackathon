@@ -1,144 +1,194 @@
-Start your API:
-This project uses relative imports, so to start uvicorn:
+# Agent Factory Hackathon
 
-1. Make sure you are in the root directory (i.e. ai-agent-platform-starter)
+## Local Development
 
-cd /path/to/ai-agent-platform-starter
+### 1. Clone or copy the project
 
-2. From the root ai-agent-platform-starter directory, run:
+Place the project wherever you normally keep your development projects.
 
-git status
-git pull   ### Daily startup
-git log --oneline -5
+The examples below use:
 
-rm -rf .venv   ### Migration / Broken env recovery
-python3.11 -m venv .venv   ### Migration / Broken env recovery
-source .venv/bin/activate   ### Daily startup
+```text
+<your-project-directory>/agent-factory-hackathon
+```
 
-pip install -e ".[dev]"  ### First-time setup / Migration / Broken env recovery
+Replace `<your-project-directory>` with your own directory structure.
 
-which python
-python --version   ### Daily startup
+### 2. Activate the virtual environment
 
-ollama list
-ollama pull qwen3:8b
+Every new terminal session should activate the project's virtual environment.
 
-curl http://localhost:11434/api/tags
+From the repository root:
 
-Recreate apps/api/.env
+```bash
+cd <your-project-directory>/agent-factory-hackathon
 source .venv/bin/activate
+```
 
-pytest -v   ### Daily startup
-black .
-ruff check .
-ruff check . --fix
-ruff check .
+You should see `(.venv)` at the beginning of your shell prompt.
 
+Verify that the correct environment is active:
+
+```bash
+which python
+which pytest
+python --version
+```
+
+Both `python` and `pytest` should resolve to:
+
+```text
+<your-project-directory>/agent-factory-hackathon/.venv/bin/
+```
+
+### 3. First-time setup
+
+If `.venv` does not exist, create it with Python 3.11:
+
+```bash
+python3.11 -m venv .venv
+```
+
+Activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+Install the project and development dependencies:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+### 4. Run the test suite
+
+Prefer:
+
+```bash
+python -m pytest
+```
+
+rather than:
+
+```bash
+pytest
+```
+
+Using `python -m pytest` ensures pytest runs with the currently active Python environment.
+
+Current baseline:
+
+```text
+26 passed, 3 skipped, 1 deselected
+```
+
+To see details about skipped tests:
+
+```bash
+python -m pytest -ra
+```
+
+### 5. Run the benchmark tests
+
+```bash
+python -m pytest apps/api/tests/benchmarks -q
+```
+
+### 6. Run the next-generation tests
+
+```bash
+python -m pytest apps/api/tests/nextgen -q
+```
+
+### 7. Start the API
+
+In one terminal, with the virtual environment activated:
+
+```bash
+cd <your-project-directory>/agent-factory-hackathon
+source .venv/bin/activate
 uvicorn apps.api.main:app --reload
+```
 
-3. From a different terminal, verify the API with this curl command:
+The API runs at:
 
-curl http://localhost:8000/health
+```text
+http://127.0.0.1:8000
+```
 
-You should see:
+### 8. Verify the API
 
-{"status":"ok"}% 
+In a **different terminal**, activate the virtual environment if necessary, then run:
 
-4. If that status said "ok", test the execute endpoint:
+```bash
+curl http://127.0.0.1:8000/health
+```
 
-curl -X POST http://localhost:8000/execute \
--H "Content-Type: application/json" \
--d '{
-  "backend":"mock",
-  "prompt":"Hello"
-}'
+Expected response:
 
-You should see this:
+```json
+{"status":"ok"}
+```
 
-{"status":"ok","backend":"mock","prompt":"Hello","output":"hello from mock backend"}%   
+### 9. Before committing
 
-4b.
+Run the test suite:
 
-curl -X POST http://localhost:8000/execute \
--H "Content-Type: application/json" \
--d '{
-  "backend":"ollama",
-  "prompt":"Say hello in one word."
-}'
+```bash
+python -m pytest
+```
 
-You should see this:
+If linting/formatting tools are configured for the project, also run:
 
-{"status":"ok","backend":"ollama","prompt":"Say hello in one word.","output":"hello\n"}%   
-
-4c.
-
-curl -X POST http://localhost:8000/execute \
--H "Content-Type: application/json" \
--d '{
-  "backend":"cerebras",
-  "prompt":"Explain AI agents in one sentence."
-}'
-
-You should see this:
-{
-  "status":"ok",
-  "backend":"cerebras",
-  "output":"An AI agent is an autonomous software entity..."
-}
-
-5. To run both test in one command, you can run:
-
-pytest
-
-6. Before every commit, run:
-
+```bash
 ruff check .
 black .
-pytest
+```
 
-
-## Running Tests
-
-Run the full test suite:
+Then check Git:
 
 ```bash
-pytest
+git status
+git log --oneline -5
 ```
 
-Recommended during development (shows skipped tests and why):
+The working tree should contain only the changes you intentionally made.
 
-```bash
-pytest -ra
-```
+## Optional Provider / Integration Tests
 
-Example:
+Some integration tests may require external services or API keys.
 
-```
-4 passed, 1 skipped
-
-SKIPPED [1] apps/api/tests/integration/test_cerebras_adapter.py:
-CEREBRAS_API_KEY missing
-```
-
-## Optional Provider Tests
-
-Some integration tests require provider API keys.
-
-Without the corresponding environment variable, those tests are skipped automatically.
-
-Example:
-
-- CEREBRAS_API_KEY → enables Cerebras integration tests
-- OPENAI_API_KEY → enables OpenAI integration tests (future)
-- ANTHROPIC_API_KEY → enables Anthropic integration tests (future)
+Tests that depend on unavailable optional services may be skipped automatically.
 
 Use:
 
 ```bash
-pytest -ra
+python -m pytest -ra
 ```
 
-to see which optional tests were skipped and why.
+to see which tests were skipped and why.
 
+Do not treat an expected, documented optional-test skip as a test failure.
 
-7/29/2026 git commit -m "checkpoint before Genspark changes"
+## Development Workflow
+
+A typical development session looks like:
+
+### Terminal 1 — API
+
+```bash
+cd <your-project-directory>/agent-factory-hackathon
+source .venv/bin/activate
+uvicorn apps.api.main:app --reload
+```
+
+### Terminal 2 — Tests / Development
+
+```bash
+cd <your-project-directory>/agent-factory-hackathon
+source .venv/bin/activate
+python -m pytest
+```
+
+Then make changes, rerun the relevant tests, and run the full suite before committing.
