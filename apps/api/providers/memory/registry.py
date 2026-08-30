@@ -1,7 +1,6 @@
 from apps.api.providers.memory.evermind import EverMindMemory
 from apps.api.providers.memory.mem0 import Mem0Memory
 
-
 memory_provider_classes = {
     "evermind": EverMindMemory,
     "mem0": Mem0Memory,

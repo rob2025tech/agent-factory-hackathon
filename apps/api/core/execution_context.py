@@ -25,7 +25,7 @@ class ExecutionContext:
     task: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def with_metadata(self, **values: Any) -> "ExecutionContext":
+    def with_metadata(self, **values: Any) -> ExecutionContext:
         """
         Return a new context with additional metadata.
 
@@ -51,7 +51,7 @@ class ExecutionContext:
         *,
         model: str | None = None,
         provider: str | None = None,
-    ) -> "ExecutionContext":
+    ) -> ExecutionContext:
         """
         Return a new context containing the selected model/provider.
         """

@@ -3,9 +3,10 @@
 from openai import OpenAI
 
 from apps.api.config.settings import settings
-from .base_adapter import BaseAdapter
+
 from ..models.request_models import ExecuteRequest
 from ..models.response_models import ExecuteResponse
+from .base_adapter import BaseAdapter
 
 
 class CerebrasAdapter(BaseAdapter):

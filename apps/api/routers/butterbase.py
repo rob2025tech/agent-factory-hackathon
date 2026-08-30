@@ -1,6 +1,7 @@
 # apps/api/routers/butterbase.py
 
 from fastapi import APIRouter
+
 from apps.api.models.request_models import ConversationCreate
 from apps.api.providers.butterbase.client import butterbase_client
 

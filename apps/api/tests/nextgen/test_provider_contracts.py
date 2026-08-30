@@ -1,9 +1,11 @@
-import pytest
 import inspect
 
+import pytest
+
 from apps.api.config.settings import settings
-from apps.api.providers.memory.registry import get_memory_provider
 from apps.api.providers.llm.registry import get_llm_provider
+from apps.api.providers.memory.registry import get_memory_provider
+
 
 @pytest.mark.anyio
 async def test_memory_provider_has_search_method():
@@ -36,7 +38,6 @@ async def test_memory_provider_has_save_method():
     assert callable(provider.save)
 
     # Check signature
-    import inspect
     sig = inspect.signature(provider.save)
     print(f"save() signature: {sig}")
 
@@ -48,6 +49,5 @@ async def test_llm_provider_has_generate_method():
     assert callable(provider.generate)
 
     # What does it expect?
-    import inspect
     sig = inspect.signature(provider.generate)
     print(f"generate() signature: {sig}")

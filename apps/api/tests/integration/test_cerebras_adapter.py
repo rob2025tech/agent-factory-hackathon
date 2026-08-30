@@ -1,6 +1,7 @@
 # apps/api/tests/integration/%20%20%20%20test_cerebras_adapter.py
 
 import os
+
 import pytest
 
 from apps.api.adapters.cerebras_adapter import CerebrasAdapter

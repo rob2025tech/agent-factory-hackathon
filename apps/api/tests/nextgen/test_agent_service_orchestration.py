@@ -1,7 +1,8 @@
 # apps/api/tests/nextgen/test_agent_service_orchestration.py
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from apps.api.services.agent_service import AgentService
 

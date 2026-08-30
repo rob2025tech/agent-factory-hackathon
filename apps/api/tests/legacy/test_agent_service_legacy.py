@@ -1,8 +1,8 @@
 # apps/api/tests/test_agent_service_legacy.py
 
 import pytest
-from apps.api.services.agent_service import AgentService
 
+from apps.api.services.agent_service import AgentService
 
 # def test_agent_service():
 

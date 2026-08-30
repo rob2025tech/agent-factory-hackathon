@@ -3,9 +3,10 @@
 from apps.api.config.settings import settings
 
 from .base_adapter import BaseAdapter
+from .cerebras_adapter import CerebrasAdapter
 from .mock_adapter import MockAdapter
 from .ollama_adapter import OllamaAdapter
-from .cerebras_adapter import CerebrasAdapter
+
 
 class AdapterRegistry:
     """

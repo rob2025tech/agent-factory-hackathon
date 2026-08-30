@@ -5,14 +5,13 @@
 #
 #   Context -> Skill -> Tool -> LLM
 
-import pytest
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from apps.api.main import app
 from apps.api.routers.execute import agent_service
-
 
 client = TestClient(app)
 

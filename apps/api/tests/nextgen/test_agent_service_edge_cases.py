@@ -1,10 +1,11 @@
 # apps/api/tests/nextgen/test_agent_service_edge_cases.py
 
-import pytest
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
+from apps.api.core.errors import InvalidLLMResponseError, InvalidMemoryDataError
 from apps.api.services.agent_service import AgentService
-from apps.api.core.errors import InvalidMemoryDataError, InvalidLLMResponseError
 
 
 @pytest.fixture
