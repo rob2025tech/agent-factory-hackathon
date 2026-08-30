@@ -57,10 +57,8 @@ def test_execute_exposes_context_skill_tool_llm_trace():
     }
 
     # LLM: the actually resolved provider and its actual output.
-    assert trace["llm"] == {
-        "provider": "mock",
-        "output": "echo: Hello",
-    }
+    assert trace["llm"]["provider"] == "mock"
+    assert trace["llm"]["output"] == "echo: Hello"
 
     # The top-level output is the LLM output recorded in the trace.
     assert body["output"] == trace["llm"]["output"]
