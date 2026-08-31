@@ -43,6 +43,28 @@ docs/architecture/      # ADRs and architecture docs
 .github/workflows/      # CI: pytest + ruff
 ```
 
+## Tool-Specific Instruction Files
+
+`AGENTS.md` is the canonical cross-agent source of truth. Tool-specific
+files exist alongside it:
+
+- `.claude/rules/rocketride.md` — Claude-specific, installer-managed
+  (RocketRide pointer). Do not hand-edit.
+- `.github/copilot-instructions.md` — Copilot-specific, installer-managed
+  (RocketRide pointer). Do not hand-edit.
+- `.rocketride/` — gitignored third-party RocketRide documentation; the
+  canonical reference for RocketRide work.
+
+`CLAUDE.md` does not exist. Create it only if genuinely Claude-specific
+behavior appears, and then as a thin import of `AGENTS.md` — never a copy.
+
+`.qoder/rules/` does not exist. Create Qoder rule files only when
+`AGENTS.md` grows too large to keep in one file or Qoder-specific topics
+appear; split by topic and never duplicate `AGENTS.md` content.
+
+No scoped subdirectory `AGENTS.md` files exist. Add one only when a
+subdirectory (e.g., a populated `packages/`) needs its own context.
+
 ## Development Environment
 
 - Virtual environment at `.venv/`. First-time setup:
