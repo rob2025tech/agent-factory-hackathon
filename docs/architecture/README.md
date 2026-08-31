@@ -30,7 +30,7 @@ Two rules for using this directory:
 | -------- | ---------- |
 | `/AGENTS.md` | Working rules for AI coding agents (and a useful handbook for humans): verified facts, engineering rules, verification steps |
 | `/README.md` | Local development setup, run, and test instructions |
-| `docs/testing.md` | Planned: testing strategy (markers, placement, determinism, CI) |
+| `docs/testing.md` | Long-form testing reference: configuration, placement, determinism, integration policy, CI — **Current**, dated snapshots, see its header |
 | `docs/workflow.md` | Planned: development workflow (verify, commit, branch, review) |
 | `docs/hackathon/` | Ephemeral hackathon planning docs (provider integration, Snowflake demo, token economy) |
 | `docs/mac-setup.md` | Machine setup notes |
