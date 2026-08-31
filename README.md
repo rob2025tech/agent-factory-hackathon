@@ -77,11 +77,9 @@ pytest
 
 Using `python -m pytest` ensures pytest runs with the currently active Python environment.
 
-Current baseline:
-
-```text
-26 passed, 3 skipped, 1 deselected
-```
+There is no fixed test-count baseline; the suite changes over time.
+Run it and read the actual results. See `docs/testing.md` §10 for the
+actual-counts rule and the latest verified snapshot.
 
 To see details about skipped tests:
 
