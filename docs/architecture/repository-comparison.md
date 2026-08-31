@@ -1,5 +1,9 @@
 # Repository Comparison
 
+> **Status: Historical (tagged 2026-08-31).** Comparison of the two
+> source repositories from the consolidation era. Retained as the
+> background for ADR-001 … ADR-006 in `architecture-decisions.md`.
+
 ## Purpose
 
 This document compares the two repositories:

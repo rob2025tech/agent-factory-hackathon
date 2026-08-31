@@ -1,5 +1,12 @@
 # Keep / Replace / Remove
 
+> **Status: Historical — contains an open contradiction (tagged
+> 2026-08-31).** "Execution Service: Keep" conflicts with the current
+> treatment of the legacy pipeline as unwired and frozen
+> (`architecture.md` §9 and §13). The disposition of the legacy
+> Execution Service is an open decision; do not act on this table
+> until it is resolved.
+
 ## Keep
 
 | Component | Reason |

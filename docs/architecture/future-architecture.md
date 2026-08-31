@@ -1,5 +1,10 @@
 # Future Architecture
 
+> **Status: Historical (tagged 2026-08-31).** Consolidation-era target
+> architecture. It depicts the legacy Execution Service / Provider
+> Adapter world; the implemented system moved to the AgentService and
+> `providers/` architecture, documented in `architecture.md`.
+
 ```
                     Browser
 

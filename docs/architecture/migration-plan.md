@@ -1,5 +1,10 @@
 # Migration Plan
 
+> **Status: Historical (tagged 2026-08-31).** Consolidation plan for
+> merging the two source repositories. Phases 1–4 produced outcomes
+> still present here (including `apps/web`); later phases reference a
+> repository that is no longer part of this project.
+
 ## Phase 1
 
 - Compare repositories
