@@ -314,7 +314,8 @@ AgentServiceError
 
 An intentional decision (documented in code): an LLM response of
 `None` is a hard error (`InvalidLLMResponseError`), not silently
-converted into an empty response.
+converted into an empty response. See ADR-008 for the recorded
+decision and its rejected alternative.
 
 Typed errors let the service layer communicate failures without
 routers understanding provider-specific failure mechanisms.
@@ -327,7 +328,8 @@ errors should map to specific HTTP statuses is an open question (§13).
 
 ## 6. Execution Trace
 
-Tracing is part of the API response. The schema family lives in
+Tracing is part of the API response (see ADR-011 for the contract
+decision). The schema family lives in
 `apps/api/models/response_models.py`:
 
 ```text
@@ -384,7 +386,7 @@ existing base classes and registering them in the matching registry
   Priority never causes selection on its own.
 - Fallback is **positional**: `skills[0]` when nothing matches. It is
   not a lookup for the skill named `default` (the registry happens to
-  contain one).
+  contain one). Recorded as ADR-009.
 
 A skill describes both what capability should execute and which
 backend provides its LLM response.
@@ -421,7 +423,8 @@ implementation.
   — async `save(user_id, data)` and `search(user_id, query)`.
 - Registry: `apps/api/providers/memory/registry.py`, a registry of
   **factories** so optional dependencies can be imported lazily.
-- Selected via `settings.memory_provider`.
+- Selected via `settings.memory_provider`. The optional-dependency
+  boundary for mem0 is recorded as ADR-010.
 
 The active pipeline depends on the `MemoryProvider` abstraction, never
 on a concrete memory implementation.
@@ -538,7 +541,8 @@ registry's lazy-import boundary.
 
 **Architectural rule:** do not combine components from the two columns
 in a single execution path unless a migration is being deliberately
-designed and tested.
+designed and tested. Recorded as ADR-012; the legacy pipeline's
+eventual removal or migration remains an open decision (§13).
 
 Conflict to resolve: `keep-replace-remove.md` lists "Execution
 Service" under **Keep**, while this document (and `AGENTS.md`) treat
