@@ -27,6 +27,7 @@ Update this document whenever a significant architectural decision is made or re
 | ADR-013 | Legacy Pipeline Is Slated for Migrate-Then-Remove | Accepted |
 | ADR-014 | Typed Service Errors Surface as HTTP 500 via a Single Exception Handler | Accepted |
 | ADR-015 | Storage and Analytics Providers Are Frozen Scaffolding | Accepted |
+| ADR-016 | The Empty Placeholders Are Deleted and the Conversation Stubs Are Frozen Scaffolding | Accepted |
 
 ADR-001 … ADR-007 were recorded when made. ADR-008 … ADR-012 were
 backfilled on 2026-08-31 from code, tests, and git history; they record
@@ -34,7 +35,10 @@ decisions whose rationale previously lived only in code comments and
 rules. Backfilled ADRs distinguish documented intent from inference and
 state explicitly where the original rationale is unknown. ADR-013 …
 ADR-015 were recorded when made on 2026-08-31; they resolve the former
-open questions 2–4 in `architecture.md` §13.
+open questions 2–4 in `architecture.md` §13. ADR-016 was recorded when
+made on 2026-08-31; it resolves former open question 1. Former open
+question 5 is closed by the Stale tag already carried by
+`api-contract.md` — no new decision was needed.
 
 ---
 
@@ -673,6 +677,74 @@ keeps agents and humans from mistaking stubs for working providers.
   reference them as extension points.
 - Future implementation must complete the ABCs, add registries, wire
   through settings, add tests, and update or supersede this ADR.
+
+---
+
+# ADR-016: The Empty Placeholders Are Deleted and the Conversation Stubs Are Frozen Scaffolding
+
+**Status:** Accepted
+
+**Date:** 2026-08-31
+
+## Context
+
+`architecture.md` §13 (former open question 1) listed files whose
+intended role was not established by the code:
+
+- Eight 0-byte files: `routers/auth.py`, `services/auth_service.py`,
+  `services/skill_service.py`, `services/memory_service.py`,
+  `services/storage_service.py`, `services/model_router.py`,
+  `repositories/base_repository.py`, `providers/nebius/client.py`.
+- Two stubs: `services/conversation_service.py` and
+  `repositories/conversation_repository.py`.
+
+All ten arrived in the initial `Hackathon baseline` commit and were
+never touched since. Nothing imports or wires any of them; the only
+references were documentation inventories and the generated
+`egg-info/SOURCES.txt`. `conversation_repository.py` duplicates what
+the wired `/butterbase` router already does directly;
+`conversation_service.py` is a docstring with an unwired layering
+sketch plus an empty function. `providers/nebius/` contained only the
+empty `client.py` (no `__init__.py`). "Authentication" appears
+elsewhere only in historical wish lists, not in any active plan.
+
+## Decision
+
+- Delete the eight 0-byte files outright. `providers/nebius/` is
+  removed with its only file.
+- Freeze `conversation_service.py` and `conversation_repository.py` in
+  place as **scaffolding, not implemented functionality**: do not wire
+  them, do not extend them, do not delete them in this decision.
+- Leave `settings.nebius_api_key` in place. It remains an orphan key;
+  removing a settings field is a configuration-surface change this
+  decision does not justify.
+
+If a deleted capability is ever genuinely needed, it is reintroduced
+through the standard extension path (define abstraction → implement →
+register → wire → test), not by restoring an empty file.
+
+## Rationale
+
+Empty files cannot encode intent; their presence misled agents into
+treating them as architecture and forced the documentation to carry
+their inventory. Deleting them is lossless — there is no content to
+migrate, unlike the ADR-013 legacy shapes. The two conversation stubs
+are kept because they contain the only concrete sketch of a
+conversation-persistence layer over Butterbase, and whether that layer
+is wanted remains an open product question.
+
+## Consequences
+
+- The eight files are removed from the tree; §13 open question 1 is
+  resolved.
+- Open question 5 is closed separately: `api-contract.md` already
+  carries a Stale tag (2026-08-31) pointing to the implemented
+  contract; no further change to that document is needed.
+- The conversation stubs are documented as frozen, unwired scaffolding
+  in `architecture.md` §3 and §10; they are not extension points.
+- The tracked `ai_agent_platform_starter.egg-info/` build artifact was
+  deliberately left untouched; untracking it is a separate hygiene
+  concern.
 
 ---
 

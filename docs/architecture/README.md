@@ -16,7 +16,7 @@ Two rules for using this directory:
 | Document | What it is | Status |
 | -------- | ---------- | ------ |
 | `architecture.md` | Authoritative reference for the implemented system: execution model, registries, boundaries, wiring status | **Current** — dated snapshots, see its header |
-| `architecture-decisions.md` | ADR log (ADR-001 … ADR-015) with an index table: consolidation-era decisions, backfilled next-generation decisions, and the 2026-08-31 legacy/storage/error dispositions | **Current** |
+| `architecture-decisions.md` | ADR log (ADR-001 … ADR-016) with an index table: consolidation-era decisions, backfilled next-generation decisions, the 2026-08-31 legacy/storage/error dispositions, and the 2026-08-31 placeholder disposition | **Current** |
 | `api-contract.md` | Early API design (`/api/chat`, `/api/providers`, …) | **Stale** — describes endpoints that were never implemented; the real contract is in `apps/api/models/` and `architecture.md` §4 |
 | `future-architecture.md` | Consolidation-era target architecture | **Historical** — depicts the legacy Execution Service / adapter world |
 | `migration-plan.md` | Consolidation phases for merging the two source repositories | **Historical** |

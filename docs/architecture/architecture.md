@@ -2,7 +2,7 @@
 
 Permanent architectural reference for this repository.
 
-Current as of commit `4eed39d` on `main` (2026-08-31). Mechanisms,
+Current as of commit `59f9580` on `main` (2026-08-31). Mechanisms,
 boundaries, and rules in this document are durable; statements about
 current inventories (registered providers, skill list, wiring status)
 are snapshots from that commit and will drift as the repository evolves.
@@ -148,13 +148,12 @@ apps/
       analytics/          # Frozen scaffolding (ADR-015), no registry, not wired
       butterbase/         # Wired via /butterbase router (no registry)
       evermind/           # Client used by the evermind memory provider
-      nebius/             # Empty client placeholder
     adapters/             # Legacy backend adapters
     memory/               # Legacy memory stores
     models/               # Pydantic API and trace contracts
     core/                 # ExecutionContext + typed error hierarchy
     config/               # pydantic-settings (reads apps/api/.env)
-    repositories/         # Placeholder repository layer (unwired)
+    repositories/         # Frozen conversation stub (ADR-016), unwired
     tests/                # Top-level unit + nextgen/, legacy/,
                           # integration/, benchmarks/
   web/                    # Static demo UI (index.html) served at /ui
@@ -177,7 +176,7 @@ docs/architecture/        # This document + ADRs
 | `models/`       | Pydantic API and trace contracts                                |
 | `core/`         | Execution context and typed errors                              |
 | `config/`       | Application configuration                                       |
-| `repositories/` | Placeholder persistence layer (stub, unwired)                   |
+| `repositories/` | Frozen conversation scaffolding (ADR-016), unwired              |
 | `tests/`        | Unit, next-generation, integration, benchmark, and legacy tests |
 | `benchmarks/`   | Standalone benchmark harness                                    |
 | `web/`          | Static API-consuming demonstration UI                           |
@@ -568,7 +567,7 @@ registered         present in a registry / selectable
 wired              reachable from the mounted application
 ```
 
-Snapshot as of commit `4eed39d`:
+Snapshot as of commit `59f9580`:
 
 | Component                          | Implemented | Registered          | Wired            |
 | ---------------------------------- | ----------- | ------------------- | ---------------- |
@@ -586,12 +585,11 @@ Snapshot as of commit `4eed39d`:
 | Analytics: base, local, snowflake  | stubs (broken, ADR-015) | no (no registry) | no |
 | Butterbase client                  | yes         | — (no registry)     | yes (`/butterbase`) |
 | EverMind client                    | yes         | —                   | yes (via memory provider) |
-| Nebius client                      | empty file  | no                  | no (only a config key) |
-| `routers/auth.py`, `services/auth_service.py`, `skill_service.py`, `memory_service.py`, `storage_service.py`, `model_router.py`, `repositories/base_repository.py` | empty files | — | no |
-| `conversation_service.py` / `conversation_repository.py` | stubs | — | no |
+| `conversation_service.py` / `conversation_repository.py` | frozen stubs (ADR-016) | — | no |
 
-The empty files are placeholders whose intended role is not
-established; do not assume them to be part of the architecture (§13).
+The former empty placeholder files were deleted by ADR-016; the frozen
+conversation stubs are scaffolding, not part of the active
+architecture.
 
 ---
 
@@ -669,16 +667,18 @@ document records the architecture those rules protect.
 
 ## 13. Known Gaps and Open Questions
 
-Items 2–4 were resolved on 2026-08-31 (ADR-013/014/015) and are
-retained here for traceability; items 1 and 5 remain open.
+All five items are resolved, all on 2026-08-31: items 2–4 by
+ADR-013/014/015, item 1 by ADR-016, and item 5 by the Stale tag
+already carried by `api-contract.md`. They are retained here for
+traceability.
 
-1. **Empty placeholders.** `routers/auth.py`,
-   `services/auth_service.py`, `skill_service.py`, `memory_service.py`,
-   `storage_service.py`, `model_router.py`,
-   `repositories/base_repository.py`, and `providers/nebius/client.py`
-   are 0-byte files; `conversation_service.py` and
-   `conversation_repository.py` are stubs. Their intended role is not
-   established by the code.
+1. ~~**Empty placeholders.**~~ Resolved by ADR-016 (2026-08-31): the
+   eight 0-byte files (`routers/auth.py`, `services/auth_service.py`,
+   `skill_service.py`, `memory_service.py`, `storage_service.py`,
+   `model_router.py`, `repositories/base_repository.py`,
+   `providers/nebius/client.py`) are deleted;
+   `conversation_service.py` and `conversation_repository.py` are
+   frozen in place as unwired scaffolding.
 
 2. ~~**Storage and analytics.**~~ Resolved by ADR-015 (2026-08-31):
    frozen scaffolding — kept in place, not wired, implemented, or
@@ -697,8 +697,10 @@ retained here for traceability; items 1 and 5 remain open.
    `keep-replace-remove.md` is superseded; the historical document is
    preserved unedited.
 
-5. **Stale contract doc.** `api-contract.md` describes unimplemented
-   endpoints; it should be updated or explicitly marked superseded.
+5. ~~**Stale contract doc.**~~ Resolved (2026-08-31): already
+   satisfied — `api-contract.md` carries a Stale status header
+   (tagged 2026-08-31) naming the never-implemented endpoints and
+   pointing to the implemented contract. No further change needed.
 
 Future capabilities should extend through the existing abstractions
 (define abstraction → implement → register → select → execute →
