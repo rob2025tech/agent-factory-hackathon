@@ -2,7 +2,7 @@
 
 Permanent architectural reference for this repository.
 
-Current as of commit `b18e869` on `main` (2026-08-31). Mechanisms,
+Current as of commit `4eed39d` on `main` (2026-08-31). Mechanisms,
 boundaries, and rules in this document are durable; statements about
 current inventories (registered providers, skill list, wiring status)
 are snapshots from that commit and will drift as the repository evolves.
@@ -144,8 +144,8 @@ apps/
     providers/            # Active provider world
       llm/                # LLM abstraction + implementations
       memory/             # Memory abstraction + implementations
-      storage/            # Implemented, no registry, not wired
-      analytics/          # Implemented, no registry, not wired
+      storage/            # Frozen scaffolding (ADR-015), no registry, not wired
+      analytics/          # Frozen scaffolding (ADR-015), no registry, not wired
       butterbase/         # Wired via /butterbase router (no registry)
       evermind/           # Client used by the evermind memory provider
       nebius/             # Empty client placeholder
@@ -320,9 +320,12 @@ decision and its rejected alternative.
 Typed errors let the service layer communicate failures without
 routers understanding provider-specific failure mechanisms.
 
-**Current gap:** no exception handlers are registered on the app, so
-uncaught `AgentServiceError`s surface as HTTP 500. Whether typed
-errors should map to specific HTTP statuses is an open question (§13).
+**Error → HTTP mapping (ADR-014):** a single exception handler
+registered in `main.py` maps every `AgentServiceError` to HTTP 500
+with a typed `ErrorResponse` body (`error_type`, `detail`; defined in
+`models/error_models.py`). The success contract (`ExecuteResponse`) is
+unchanged, and Pydantic validation errors remain 422. Differentiated
+status codes per error subclass are explicitly deferred.
 
 ---
 
@@ -455,14 +458,17 @@ Configuration surface:
 | `cerebras_api_key`         | `None`                      | Legacy cerebras adapter (gates registration) |
 | `memory_provider`          | `evermind`                  | `AgentService` init             |
 | `llm_provider`             | `ollama`                    | `AgentService` init             |
-| `storage_provider`         | `local`                     | **Nothing currently**           |
-| `analytics_provider`       | `local`                     | **Nothing currently**           |
+| `storage_provider`         | `local`                     | **Nothing currently** (frozen scaffolding, ADR-015) |
+| `analytics_provider`       | `local`                     | **Nothing currently** (frozen scaffolding, ADR-015) |
 
 Rules:
 
 - Route all configuration through `settings.py`; no hard-coded URLs,
   keys, or provider choices in code.
 - `.env` files and credentials are never committed.
+
+`apps/api/.env.example` documents the available knobs (without
+secrets) for copying to `apps/api/.env`.
 
 Runtime requirements: Python ≥ 3.11. Optional extras: `.[dev]`
 (pytest, ruff, black, mypy) and `.[mem0]` (the optional mem0 memory
@@ -541,12 +547,14 @@ registry's lazy-import boundary.
 
 **Architectural rule:** do not combine components from the two columns
 in a single execution path unless a migration is being deliberately
-designed and tested. Recorded as ADR-012; the legacy pipeline's
-eventual removal or migration remains an open decision (§13).
+designed and tested. Recorded as ADR-012. The legacy pipeline's
+disposition is now decided: it is slated for migrate-then-remove
+(ADR-013), and the isolation rule remains in force until that
+migration happens.
 
-Conflict to resolve: `keep-replace-remove.md` lists "Execution
-Service" under **Keep**, while this document (and `AGENTS.md`) treat
-it as legacy and unwired (§13).
+Superseded conflict: `keep-replace-remove.md` lists "Execution
+Service" under **Keep**. ADR-013 supersedes that entry; the document
+remains tagged Historical and preserved unedited (§13).
 
 ---
 
@@ -560,7 +568,7 @@ registered         present in a registry / selectable
 wired              reachable from the mounted application
 ```
 
-Snapshot as of commit `b18e869`:
+Snapshot as of commit `4eed39d`:
 
 | Component                          | Implemented | Registered          | Wired            |
 | ---------------------------------- | ----------- | ------------------- | ---------------- |
@@ -574,8 +582,8 @@ Snapshot as of commit `b18e869`:
 | Legacy adapters: mock, ollama      | yes         | yes                 | no (not routed)  |
 | Legacy adapter: cerebras           | yes         | if API key set      | no (not routed)  |
 | Legacy adapters: openai, snowflake | yes         | no                  | no               |
-| Storage: base, local, butterbase   | yes         | no (no registry)    | no               |
-| Analytics: base, local, snowflake  | yes         | no (no registry)    | no               |
+| Storage: base, local, butterbase   | stubs (broken, ADR-015) | no (no registry) | no |
+| Analytics: base, local, snowflake  | stubs (broken, ADR-015) | no (no registry) | no |
 | Butterbase client                  | yes         | — (no registry)     | yes (`/butterbase`) |
 | EverMind client                    | yes         | —                   | yes (via memory provider) |
 | Nebius client                      | empty file  | no                  | no (only a config key) |
@@ -661,6 +669,9 @@ document records the architecture those rules protect.
 
 ## 13. Known Gaps and Open Questions
 
+Items 2–4 were resolved on 2026-08-31 (ADR-013/014/015) and are
+retained here for traceability; items 1 and 5 remain open.
+
 1. **Empty placeholders.** `routers/auth.py`,
    `services/auth_service.py`, `skill_service.py`, `memory_service.py`,
    `storage_service.py`, `model_router.py`,
@@ -669,21 +680,22 @@ document records the architecture those rules protect.
    `conversation_repository.py` are stubs. Their intended role is not
    established by the code.
 
-2. **Storage and analytics.** Settings keys, commented-out
-   `AgentService` hooks, and implemented provider classes exist, but
-   there are no registries and nothing is wired. The commented import
-   even references a nonexistent `providers/storage/registry.py`.
-   Planned or abandoned is unclear; reconcile with
-   `future-architecture.md`.
+2. ~~**Storage and analytics.**~~ Resolved by ADR-015 (2026-08-31):
+   frozen scaffolding — kept in place, not wired, implemented, or
+   deleted. The `storage_provider` / `analytics_provider` settings
+   remain inactive.
 
-3. **Error → HTTP mapping.** Typed errors exist but no exception
-   handlers are registered, so they surface as HTTP 500. Decide
-   whether errors should map to specific statuses.
+3. ~~**Error → HTTP mapping.**~~ Resolved by ADR-014 (2026-08-31): a
+   single exception handler maps every `AgentServiceError` to HTTP 500
+   with a typed `ErrorResponse` body. Differentiated status codes per
+   error subclass are explicitly deferred.
 
-4. **Legacy pipeline status.** The `select()` signature mismatch (§9)
-   is unresolved, and `keep-replace-remove.md` ("Execution Service —
-   Keep") conflicts with the legacy/unwired treatment here and in
-   `AGENTS.md`. Needs an explicit keep-or-remove decision.
+4. ~~**Legacy pipeline status.**~~ Resolved by ADR-013 (2026-08-31):
+   the legacy pipeline is slated for migrate-then-remove. The
+   `select()` signature mismatch (§9) is not fixed in place; it is
+   carried into that migration. The "Keep" entry in
+   `keep-replace-remove.md` is superseded; the historical document is
+   preserved unedited.
 
 5. **Stale contract doc.** `api-contract.md` describes unimplemented
    endpoints; it should be updated or explicitly marked superseded.

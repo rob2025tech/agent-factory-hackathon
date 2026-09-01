@@ -260,11 +260,13 @@ behaviors: `test_execute.py` asserts the echoed value;
 
 ## 10. Current Snapshot and the Actual-Counts Rule
 
-Snapshot from 2026-08-31 (commit `4eed39d`), run from the repository
-root in the project venv:
+Snapshot from 2026-08-31, run from the repository root in the project
+venv. This is the working tree after commit `4eed39d`, with the four
+ADR-014 error-handler tests (`tests/nextgen/test_error_handler.py`)
+added:
 
 ```text
-39 passed, 3 skipped, 1 deselected
+43 passed, 3 skipped, 1 deselected
 ```
 
 This is a snapshot, not a baseline. The suite has no fixed expected

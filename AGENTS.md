@@ -31,7 +31,7 @@ apps/
     skills/             # Skill definitions + keyword router
     tools/              # Deterministic tools
     providers/          # Active provider world: llm/, memory/, storage/, analytics/
-    adapters/           # Legacy backend adapters (mock/ollama/cerebras)
+    adapters/           # Legacy backend adapters (ADR-013: migrate-then-remove)
     memory/             # Legacy in-memory conversation store
     models/             # Pydantic request/response models (API contract)
     core/               # ExecutionContext, error hierarchy
@@ -117,8 +117,11 @@ from `core/errors.py` (`AgentServiceError` hierarchy). An LLM response of
 **Legacy (not wired to any router):**
 
 `services/execution_service.py` + `adapters/` registry (`BaseAdapter`:
-mock/ollama/cerebras) + `memory/memory_manager.py`. Changes here do not
-affect `/execute`.
+mock/ollama always registered; cerebras only when `cerebras_api_key` is
+set; openai/snowflake exist but are unregistered) +
+`memory/memory_manager.py`. Changes here do not affect `/execute`. The
+legacy pipeline is slated for migrate-then-remove (ADR-013); do not
+extend it.
 
 ## Provider / Registry Architecture
 

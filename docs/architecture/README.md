@@ -16,11 +16,11 @@ Two rules for using this directory:
 | Document | What it is | Status |
 | -------- | ---------- | ------ |
 | `architecture.md` | Authoritative reference for the implemented system: execution model, registries, boundaries, wiring status | **Current** — dated snapshots, see its header |
-| `architecture-decisions.md` | ADR log (ADR-001 … ADR-012) with an index table: consolidation-era decisions plus backfilled next-generation decisions | **Current** |
+| `architecture-decisions.md` | ADR log (ADR-001 … ADR-015) with an index table: consolidation-era decisions, backfilled next-generation decisions, and the 2026-08-31 legacy/storage/error dispositions | **Current** |
 | `api-contract.md` | Early API design (`/api/chat`, `/api/providers`, …) | **Stale** — describes endpoints that were never implemented; the real contract is in `apps/api/models/` and `architecture.md` §4 |
 | `future-architecture.md` | Consolidation-era target architecture | **Historical** — depicts the legacy Execution Service / adapter world |
 | `migration-plan.md` | Consolidation phases for merging the two source repositories | **Historical** |
-| `keep-replace-remove.md` | Consolidation-era keep/replace/remove inventory | **Historical** — contains an open contradiction about the legacy Execution Service; see `architecture.md` §13 |
+| `keep-replace-remove.md` | Consolidation-era keep/replace/remove inventory | **Historical** — its legacy Execution Service entry is superseded by ADR-013; see `architecture.md` §9 and §13 |
 | `repository-comparison.md` | Comparison of the two source repositories | **Historical** — background for ADR-001 … ADR-006 |
 | `feature-matrix.md` | Consolidation-era feature inventory | **Historical** — not a list of implemented features |
 

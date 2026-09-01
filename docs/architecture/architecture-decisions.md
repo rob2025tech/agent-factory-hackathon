@@ -24,12 +24,17 @@ Update this document whenever a significant architectural decision is made or re
 | ADR-010 | mem0 Remains an Optional Dependency Behind a Lazy Provider Factory | Accepted (backfilled) |
 | ADR-011 | The Execution Trace Is Part of the Typed API/UI Contract | Accepted (backfilled) |
 | ADR-012 | Keep the Legacy Pipeline Isolated from the Active Next-Generation Path | Accepted (backfilled) |
+| ADR-013 | Legacy Pipeline Is Slated for Migrate-Then-Remove | Accepted |
+| ADR-014 | Typed Service Errors Surface as HTTP 500 via a Single Exception Handler | Accepted |
+| ADR-015 | Storage and Analytics Providers Are Frozen Scaffolding | Accepted |
 
 ADR-001 … ADR-007 were recorded when made. ADR-008 … ADR-012 were
 backfilled on 2026-08-31 from code, tests, and git history; they record
 decisions whose rationale previously lived only in code comments and
 rules. Backfilled ADRs distinguish documented intent from inference and
-state explicitly where the original rationale is unknown.
+state explicitly where the original rationale is unknown. ADR-013 …
+ADR-015 were recorded when made on 2026-08-31; they resolve the former
+open questions 2–4 in `architecture.md` §13.
 
 ---
 
@@ -500,13 +505,16 @@ The repository contains two execution pipelines: the next-generation `AgentServi
 
 ## Open question
 
-Future removal or migration of the legacy pipeline is an open architectural decision, tracked in `architecture.md` §13. This ADR records the current isolation; it is not a permanent commitment to keep or remove the legacy code.
+Resolved by ADR-013 (2026-08-31): the legacy pipeline is slated for
+migrate-then-remove, with the capabilities to preserve identified
+there. Until that migration happens, this ADR's isolation rule remains
+in force.
 
 ## Consequences
 
 - Changes to legacy components have no effect on `/execute` unless wiring decisions change.
 - Work touching legacy files must be explicitly scoped as legacy work.
-- `keep-replace-remove.md` lists "Execution Service — Keep"; that statement conflicts with the open disposition above and must not be acted on until resolved.
+- `keep-replace-remove.md` lists "Execution Service — Keep"; that statement conflicted with the disposition above and is superseded by ADR-013. The historical document is preserved unedited.
 
 ## Evidence
 
@@ -514,6 +522,157 @@ Future removal or migration of the legacy pipeline is an open architectural deci
 - `AGENTS.md` (Architectural Boundaries; Things Not to Change Casually)
 - `docs/architecture/architecture.md` §9 and §13
 - Commit history `516db03` onward (next-generation pipeline replacing the adapter path)
+
+---
+
+# ADR-013: Legacy Pipeline Is Slated for Migrate-Then-Remove
+
+**Status:** Accepted
+
+**Date:** 2026-08-31
+
+## Context
+
+ADR-012 recorded the isolation of the legacy pipeline
+(`services/execution_service.py`, `adapters/`, `apps/api/memory/`) and
+explicitly left its eventual removal or migration as an open question.
+The historical `keep-replace-remove.md` lists "Execution Service" under
+**Keep**, which conflicts with that treatment.
+
+## Decision
+
+The legacy pipeline is slated for **removal, preceded by migration** of
+any capability worth preserving. This ADR records the disposition only:
+no migration and no deletion are performed with it, and ADR-012's
+isolation rule remains fully in force until the migration happens.
+
+Migration boundary — capabilities to preserve or explicitly drop:
+
+- **Cerebras integration shape** (legacy `CerebrasAdapter` plus
+  `tests/integration/test_cerebras_adapter.py`).
+- **OpenAI integration shape** (`openai_adapter.py`, unregistered).
+- **Snowflake adapter shape** (`snowflake_adapter.py`, unregistered).
+- Legacy conversation memory (`apps/api/memory/`) — superseded by
+  `providers/memory/`; droppable unless a reason to keep it is stated.
+
+If the platform needs these backends in the future, they must be
+implemented as next-generation providers (`providers/llm/` etc.) — not
+re-wired through the legacy path.
+
+## Rationale
+
+The legacy path is unwired, duplicates the provider abstractions, has a
+known runtime mismatch (`execute_agent` passes an `ExecuteRequest` to
+`select()`, which expects a prompt string), and forces the docs to
+carry the Keep-vs-frozen contradiction. Indefinite retention costs
+documentation accuracy; outright deletion would discard integration
+shapes before their value is decided.
+
+## Consequences
+
+- `keep-replace-remove.md`'s "Keep" entry is superseded by this ADR.
+  The document stays tagged Historical and is preserved unedited.
+- The `AGENTS.md` rule to leave legacy files alone unless explicitly
+  scoped remains in force until the migration.
+- Tests that depend on legacy code (`tests/test_mock_adapter.py`,
+  `tests/integration/test_cerebras_adapter.py`) are migrated or removed
+  together with it.
+- The actual migration/removal is a separate future task requiring its
+  own plan; it must update or supersede this ADR when it lands.
+
+---
+
+# ADR-014: Typed Service Errors Surface as HTTP 500 via a Single Exception Handler
+
+**Status:** Accepted
+
+**Date:** 2026-08-31
+
+## Context
+
+`apps/api/core/errors.py` defines the `AgentServiceError` hierarchy,
+but no exception handlers were registered on the app. Uncaught service
+errors surfaced as FastAPI's bare HTTP 500 with no typed body, and the
+hierarchy had no external manifestation (open question in
+`architecture.md` §13).
+
+## Decision
+
+A single `exception_handler(AgentServiceError)` registered in
+`apps/api/main.py` returns:
+
+- HTTP status **500** for every `AgentServiceError` subclass;
+- a dedicated `ErrorResponse` body (`apps/api/models/error_models.py`)
+  with `error_type` (the exception class name) and `detail` (the
+  exception message).
+
+The error body is a separate schema; `ExecuteResponse` is unchanged.
+Differentiated status codes per error subclass are explicitly deferred.
+
+## Rationale
+
+The minimal mapping that makes service failures typed and observable
+without redesigning the success contract. It keeps the typed-contract
+principle at the error boundary while avoiding an invented
+status-code mapping. Pydantic request-validation errors remain 422.
+
+## Consequences
+
+- Clients can rely on `{error_type, detail}` for `/execute` service
+  failures.
+- Covered by `apps/api/tests/nextgen/test_error_handler.py`.
+- If clients later need differentiation (e.g. 502 for upstream provider
+  failures), that is a new decision requiring its own ADR and contract
+  update.
+
+---
+
+# ADR-015: Storage and Analytics Providers Are Frozen Scaffolding
+
+**Status:** Accepted
+
+**Date:** 2026-08-31
+
+## Context
+
+`providers/storage/` and `providers/analytics/` contain ABCs and
+incomplete classes: `LocalStorage` and `ButterbaseStorage` do not
+implement `get()` and cannot be instantiated; `ButterbaseStorage.save`
+is a stub; `LocalAnalytics.record` writes invalid JSON;
+`SnowflakeAnalytics.record` references an undefined function. There are
+no registries, `AgentService` hooks are commented out, and
+`settings.storage_provider` / `settings.analytics_provider` consume
+nothing. The Snowflake scaffold is tied to the hackathon demo plans in
+`docs/hackathon/`. Whether this area was planned or abandoned was an
+open question in `architecture.md` §13.
+
+## Decision
+
+Freeze the storage/analytics code exactly as it is and document it as
+**scaffolding, not implemented providers**:
+
+- do not wire it into `AgentService`;
+- do not implement or "fix" the scaffolds incidentally;
+- do not delete it in this decision;
+- treat the `storage_provider` / `analytics_provider` settings fields
+  as inactive configuration.
+
+Implementation (or removal) becomes a separate task if and when the
+capability is actually needed.
+
+## Rationale
+
+Deleting the scaffolds would pre-empt the open hackathon direction
+(Snowflake); implementing them without requirements would invent an
+API. Freezing with explicit documentation is the honest minimum that
+keeps agents and humans from mistaking stubs for working providers.
+
+## Consequences
+
+- Agents must not treat storage/analytics as usable providers or
+  reference them as extension points.
+- Future implementation must complete the ABCs, add registries, wire
+  through settings, add tests, and update or supersede this ADR.
 
 ---
 
