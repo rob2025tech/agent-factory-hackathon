@@ -1,6 +1,13 @@
 # apps/api/providers/memory/evermind.py
 
+import re
+
 from apps.api.providers.memory.base import MemoryProvider
+
+
+def _tokenize(text: str) -> set[str]:
+    """Lowercase alphanumeric tokens, deterministic across runs."""
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
 
 
 class EverMindMemory(MemoryProvider):
@@ -27,19 +34,31 @@ class EverMindMemory(MemoryProvider):
         user_id: str,
         query: str,
     ):
+        # DECISION: deterministic lexical token-overlap retrieval.
+        # Trade-off: this is lexical, not semantic — a natural-language
+        # query matches when it shares tokens with a stored memory.
+        # Score = number of distinct query tokens present in the memory
+        # text; only positive-overlap memories are returned, highest
+        # score first, insertion order preserved for ties (sorted() is
+        # stable). No embeddings, no external service, no result cap.
 
         user_memories = self.memories.get(
             user_id,
             [],
         )
 
-        results = []
+        query_tokens = _tokenize(query)
+
+        scored = []
 
         for memory in user_memories:
-            if query.lower() in str(memory).lower():
-                results.append(memory)
+            overlap = len(query_tokens & _tokenize(str(memory)))
+            if overlap > 0:
+                scored.append((overlap, memory))
 
-        return results
+        scored.sort(key=lambda item: item[0], reverse=True)
+
+        return [memory for _, memory in scored]
 
     async def load(
         self,

@@ -352,11 +352,13 @@ currently populates a subset of the schema:
 - `context` — user_id and task;
 - `skill` — the selected skill name;
 - `tool` — the **first** executed tool only (name + output);
-- `llm` — the resolved backend name and the generated output.
+- `llm` — the resolved backend name and the generated output;
+- `memory` — `search_query`, `memory_count`, and measured
+  `search_duration_ms` / `save_duration_ms` (ADR-017).
 
-The remaining fields (`tools[]`, `skill_selection`, `memory`, timing,
-`trace_id`) are forward-looking schema that the active path does not
-yet fill.
+The remaining fields (`tools[]`, `skill_selection`, `trace_id`,
+timestamp, `total_duration_ms`, trace-level `status`) are
+forward-looking schema that the active path does not yet fill.
 
 The trace makes execution observable: instead of returning only
 `prompt → response`, the API exposes how the response was produced.
@@ -427,6 +429,9 @@ implementation.
   **factories** so optional dependencies can be imported lazily.
 - Selected via `settings.memory_provider`. The optional-dependency
   boundary for mem0 is recorded as ADR-010.
+- Retrieval semantics: the default `EverMindMemory` performs
+  deterministic lexical token-overlap retrieval (ADR-017). Storage is
+  an in-process dict — temporary, lost on server restart.
 
 The active pipeline depends on the `MemoryProvider` abstraction, never
 on a concrete memory implementation.

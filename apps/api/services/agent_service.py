@@ -1,5 +1,7 @@
 # apps/api/services/agent_service.py
 
+from time import perf_counter
+
 from apps.api.config.settings import settings
 
 # from apps.api.providers.storage.registry import get_storage_provider
@@ -47,6 +49,7 @@ class AgentService:
         prompt: str,
     ):
         # 1. Search memory
+        search_start = perf_counter()
         try:
             memories = await self.memory.search(
                 user_id=user_id,
@@ -55,6 +58,7 @@ class AgentService:
         except Exception as e:
             raise MemorySearchError(
                 f"Memory search failed for user '{user_id}': {e}") from e
+        search_duration_ms = (perf_counter() - search_start) * 1000
 
         # 2. Validate memories is iterable
         if not hasattr(memories, '__len__'):
@@ -138,6 +142,7 @@ class AgentService:
         }
 
         # 5. Save to memory
+        save_start = perf_counter()
         try:
             await self.memory.save(
                 user_id=user_id,
@@ -149,6 +154,16 @@ class AgentService:
         except Exception as e:
             raise MemorySaveError(
                 f"Failed to save conversation for user '{user_id}': {e}") from e
+        save_duration_ms = (perf_counter() - save_start) * 1000
+
+        # MemoryTrace is attached after memory.save() so both durations are
+        # real measurements (ADR-011 lists trace.memory as an additive field).
+        trace["memory"] = {
+            "search_query": prompt,
+            "memory_count": len(memories),
+            "search_duration_ms": search_duration_ms,
+            "save_duration_ms": save_duration_ms,
+        }
 
         # 6. (Commented out) Storage and analytics
         # await self.storage.save_conversation(

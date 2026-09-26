@@ -28,6 +28,7 @@ Update this document whenever a significant architectural decision is made or re
 | ADR-014 | Typed Service Errors Surface as HTTP 500 via a Single Exception Handler | Accepted |
 | ADR-015 | Storage and Analytics Providers Are Frozen Scaffolding | Accepted |
 | ADR-016 | The Empty Placeholders Are Deleted and the Conversation Stubs Are Frozen Scaffolding | Accepted |
+| ADR-017 | Deterministic Lexical Token-Overlap Retrieval in the Default Memory Provider | Accepted |
 
 ADR-001 … ADR-007 were recorded when made. ADR-008 … ADR-012 were
 backfilled on 2026-08-31 from code, tests, and git history; they record
@@ -38,7 +39,8 @@ ADR-015 were recorded when made on 2026-08-31; they resolve the former
 open questions 2–4 in `architecture.md` §13. ADR-016 was recorded when
 made on 2026-08-31; it resolves former open question 1. Former open
 question 5 is closed by the Stale tag already carried by
-`api-contract.md` — no new decision was needed.
+`api-contract.md` — no new decision was needed. ADR-017 was recorded
+when made on 2026-09-26.
 
 ---
 
@@ -745,6 +747,75 @@ is wanted remains an open product question.
 - The tracked `ai_agent_platform_starter.egg-info/` build artifact was
   deliberately left untouched; untracking it is a separate hygiene
   concern.
+
+---
+
+# ADR-017: Deterministic Lexical Token-Overlap Retrieval in the Default Memory Provider
+
+**Status:** Accepted
+
+**Date:** 2026-09-26
+
+## Context
+
+`EverMindMemory` (the default `memory_provider`) previously matched only
+when the entire query string appeared as a substring of a stored memory's
+text. Because `AgentService` always passes the full user prompt as the
+query, natural follow-up questions ("What is my favorite language?" after
+saving "My favorite language is Python.") retrieved nothing,
+`memory_count` stayed at 0, and cross-request memory appeared broken.
+`test_execute_with_memory.py` encoded exactly this scenario and was
+skipped with reason "Awaiting semantic memory implementation". The
+`providers/evermind/client.py` stub is unimplemented and unused by the
+provider.
+
+## Decision
+
+- `EverMindMemory.search()` uses deterministic lexical token-overlap
+  retrieval:
+  - Text is lowercased and tokenized into alphanumeric tokens
+    (`[a-z0-9]+`).
+  - A memory's score is the number of distinct query tokens present in
+    `str(memory)`.
+  - Only memories with positive overlap are returned, highest score
+    first; ties preserve insertion order (stable sort). No result cap,
+    no stop-word filtering.
+- `AgentService` populates the existing `MemoryTrace` (`search_query`,
+  `memory_count`, `search_duration_ms`, `save_duration_ms`), measured
+  with `time.perf_counter()`. Per ADR-011 this is additive: the
+  `ExecutionTrace` schema is unchanged.
+- `test_execute_with_memory.py` is activated (skip removed).
+
+## Alternatives considered
+
+- Embedding-based semantic retrieval — rejected: adds dependencies and
+  an external service, and breaks the determinism of this slice.
+- mem0 provider — remains available behind the optional extra
+  (ADR-010); this decision does not change that boundary.
+- Butterbase-backed memory — rejected: Butterbase remains a separate
+  `/butterbase` surface; storage scaffolding stays frozen (ADR-015).
+
+## Consequences
+
+- Retrieval is lexical, not semantic: paraphrases with no shared tokens
+  still miss, and generic tokens can over-match. Accepted for a
+  deterministic starter.
+- Storage remains an in-process dict: memory survives across requests
+  within one server process but is lost on restart. The EverMind client
+  stub remains the future replacement point.
+- This does not make `MockLLM` memory-aware; mock output stays
+  `echo: <prompt>`. Retrieved memories influence generation only through
+  providers that consume the `memories` argument (e.g. Ollama).
+- `trace.memory` is now an object instead of null. `apps/web` reads only
+  `context`/`skill`/`tool`/`llm`, so no UI change was required.
+
+## Evidence
+
+- `apps/api/providers/memory/evermind.py` (`_tokenize`, scored search)
+- `apps/api/services/agent_service.py` (timings, `trace["memory"]`)
+- `apps/api/tests/nextgen/providers/memory/test_evermind.py` (retrieval
+  semantics tests)
+- `apps/api/tests/nextgen/test_execute_with_memory.py` (activated)
 
 ---
 
