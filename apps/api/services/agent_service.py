@@ -1,6 +1,8 @@
 # apps/api/services/agent_service.py
 
+from datetime import UTC, datetime
 from time import perf_counter
+from uuid import uuid4
 
 from apps.api.config.settings import settings
 
@@ -17,6 +19,8 @@ from apps.api.core.errors import (
 from apps.api.core.execution_context import ExecutionContext
 from apps.api.providers.llm.registry import get_llm_provider
 from apps.api.providers.memory.registry import get_memory_provider
+from apps.api.skills.registry import skills
+from apps.api.skills.router import explain as explain_skill_selection
 from apps.api.skills.router import select as select_skill
 from apps.api.tools.registry import tools
 
@@ -48,6 +52,14 @@ class AgentService:
         user_id: str,
         prompt: str,
     ):
+        # Overall execution timing and identity for the observability
+        # trace (ADR-011 reserved fields: trace_id, timestamp,
+        # total_duration_ms). Monotonic clock for durations; timezone-aware
+        # UTC for the timestamp.
+        overall_start = perf_counter()
+        trace_id = str(uuid4())
+        timestamp = datetime.now(UTC)
+
         # 1. Search memory
         search_start = perf_counter()
         try:
@@ -80,16 +92,36 @@ class AgentService:
             task=prompt,
         )
 
+        # Time skill selection and capture the reason implicit in the
+        # existing router behavior (no new routing algorithm).
+        selection_start = perf_counter()
         skill = select_skill(prompt)
+        selection_duration_ms = (perf_counter() - selection_start) * 1000
+        selection_reason = explain_skill_selection(prompt)
 
         context = context.with_metadata(skill=skill.name)
 
         # Run the skill's registered tools (deterministic).
+        # tool_outputs preserves existing first-tool/context behavior;
+        # tool_traces records per-tool detail for the tools[] trace field.
         tool_outputs = {}
-        for tool_name in skill.tools:
+        tool_traces = []
+        for order, tool_name in enumerate(skill.tools):
             tool = tools.get(tool_name)
             if tool is not None:
-                tool_outputs[tool_name] = tool.execute(prompt)
+                tool_start = perf_counter()
+                tool_output = tool.execute(prompt)
+                tool_duration_ms = (perf_counter() - tool_start) * 1000
+                tool_outputs[tool_name] = tool_output
+                tool_traces.append(
+                    {
+                        "name": tool_name,
+                        "input": prompt,
+                        "output": tool_output,
+                        "duration_ms": tool_duration_ms,
+                        "order": order,
+                    }
+                )
 
         if tool_outputs:
             context = context.with_metadata(tool_outputs=tool_outputs)
@@ -102,6 +134,7 @@ class AgentService:
         else:
             llm = get_llm_provider(skill.backend)
 
+        llm_start = perf_counter()
         try:
             response = await llm.generate(
                 prompt=prompt,
@@ -109,6 +142,17 @@ class AgentService:
             )
         except Exception as e:
             raise LLMProviderError(f"LLM generation failed: {e}") from e
+        llm_duration_ms = (perf_counter() - llm_start) * 1000
+
+        # Populate llm.model only when the resolved provider already exposes
+        # a real string model value (e.g. OllamaLLM.model). Reads existing
+        # state; does not change the LLMProvider contract. Anything else
+        # (absent attribute, non-string) stays None so the field is never
+        # fabricated and never breaks the trace contract. tokens_used is left
+        # unset because no reliable source exists in this slice.
+        llm_model = getattr(llm, "model", None)
+        if not isinstance(llm_model, str):
+            llm_model = None
 
         # 4. Validate LLM response - DECISION: Treat None as error
         # Trade-off: This is a hard fail. If you want graceful degradation,
@@ -122,11 +166,20 @@ class AgentService:
         first_tool = next(iter(tool_outputs.items()), None)
 
         trace = {
+            "trace_id": trace_id,
+            "timestamp": timestamp,
+            "status": "ok",
             "context": {
                 "user_id": context.user_id,
                 "task": context.task,
             },
             "skill": skill.name,
+            "skill_selection": {
+                "selected_skill": skill.name,
+                "available_skills": [s.name for s in skills],
+                "selection_time_ms": selection_duration_ms,
+                "selection_reason": selection_reason,
+            },
             "tool": (
                 {
                     "name": first_tool[0],
@@ -135,9 +188,12 @@ class AgentService:
                 if first_tool is not None
                 else None
             ),
+            "tools": tool_traces,
             "llm": {
                 "provider": skill.backend,
+                "model": llm_model,
                 "output": response,
+                "duration_ms": llm_duration_ms,
             },
         }
 
@@ -176,6 +232,10 @@ class AgentService:
         #     prompt=prompt,
         #     response=response,
         # )
+
+        # Total wall-clock duration of the slice, measured from the overall
+        # monotonic start; computed last so it bounds every sub-duration.
+        trace["total_duration_ms"] = (perf_counter() - overall_start) * 1000
 
         return {
             "status": "ok",
